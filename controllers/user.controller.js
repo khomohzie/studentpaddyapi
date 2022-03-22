@@ -65,11 +65,14 @@ exports.updateAccount = async (req, res) => {
 
 		// Upload image to firebase
 		if (req.file) {
-			await firebaseUpload(req.file)
-				.then((downloadURL) => {
+			await firebaseUpload(req.file).then(
+				(downloadURL) => {
 					user.photo = downloadURL;
-				})
-				.catch((error) => console.error(error));
+				},
+				(error) => {
+					console.error("FIREBASE ERROR ==>", error);
+				}
+			);
 		}
 
 		// Check for fields with new value and assign to the user document for update
@@ -147,11 +150,14 @@ exports.profileSetup = async (req, res) => {
 
 		// Upload image to firebase
 		if (req.file) {
-			await firebaseUpload(req.file)
-				.then((downloadURL) => {
+			await firebaseUpload(req.file).then(
+				(downloadURL) => {
 					user.photo = downloadURL;
-				})
-				.catch((error) => console.error(error));
+				},
+				(error) => {
+					console.error("FIREBASE ERROR ==>", error);
+				}
+			);
 		}
 
 		// Check for fields with new value and assign to the user document for update
