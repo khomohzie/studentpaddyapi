@@ -152,7 +152,19 @@ exports.readCommunity = async (req, res) => {
 
 exports.followCommunity = async (req, res) => {
 	try {
-		const community = await Community.find({ _id: req.params.id }).exec();
+		const alreadyFollowed = await CommunityFollower.findOne({
+			community_id: req.params.id,
+			user_id: req.user._id,
+		}).exec();
+
+		if (alreadyFollowed)
+			return res
+				.status(400)
+				.json({ error: "You are already following community!" });
+
+		const community = await Community.findOne({
+			_id: req.params.id,
+		}).exec();
 
 		if (!community)
 			return res.status(400).json({ error: "Cannot follow community!" });
@@ -176,6 +188,29 @@ exports.followCommunity = async (req, res) => {
 
 			res.json(doc);
 		});
+	} catch (error) {
+		console.log(error);
+		return res
+			.status(500)
+			.json({ error: "Something went wrong! Please try again." });
+	}
+};
+
+exports.unFollowCommunity = async (req, res) => {
+	try {
+		const community = await CommunityFollower.findOne({
+			community_id: req.params.id,
+			user_id: req.user._id,
+		}).exec();
+
+		if (!community)
+			return res
+				.status(400)
+				.json({ error: "Cannot unfollow community!" });
+
+		await CommunityFollower.deleteOne(community).exec();
+
+		res.json({ message: "Successful!" });
 	} catch (error) {
 		console.log(error);
 		return res
