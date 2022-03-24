@@ -1,18 +1,21 @@
 const mongoose = require("mongoose");
 
-const topicSchema = new mongoose.Schema({
-	name: {
-		type: String,
-		required: true,
+const topicSchema = new mongoose.Schema(
+	{
+		name: {
+			type: String,
+			required: true,
+		},
+		community_id: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Community",
+		},
+		followers: {
+			type: Number,
+			default: 0,
+		},
 	},
-	community_id: {
-		type: mongoose.Schema.Types.ObjectId,
-		ref: "Community",
-	},
-	followers: {
-		type: Number,
-		default: 0,
-	},
-});
+	{ timestamps: true }
+);
 
 module.exports = mongoose.model("Topic", topicSchema);
