@@ -15,7 +15,7 @@ const { requireSignin } = require("../controllers/auth.controller");
 router.post("/topic", requireSignin, create);
 router.get("/topics", getAll);
 router.get("/topic/:name", readTopic);
-router.post("/topic/follow/:id", requireSignin, followTopic);
-router.post("/topic/unfollow/:id", requireSignin, unFollowTopic);
+router.put("/topic/follow/:id", requireSignin, followTopic);
+router.put("/topic/unfollow/:id", requireSignin, unFollowTopic);
 
 module.exports = router;
