@@ -14,22 +14,26 @@ exports.firebaseUpload = (file) => {
 	return new Promise((resolve, reject) => {
 		// Add Image to Storage and return the file path
 		// Grab the file
-		const imgFile = file;
+		const theFile = file;
+		const theFileName = file.originalname;
 
 		// Format the filename
 		const timestamp = Date.now();
-		const name = imgFile.originalname.split(".")[0];
-		const type = imgFile.originalname.split(".")[1];
+		const name = theFileName.substring(0, theFileName.lastIndexOf("."));
+		const type = theFileName.substring(
+			theFileName.lastIndexOf("."),
+			theFileName.length
+		);
 
-		const fileName = `${name}_${timestamp}.${type}`;
+		const fileName = `${timestamp}_${name}${type}`;
 
 		// Create a URL and return the storage reference
 		const storageRef = ref(storage, fileName);
 
 		const uploadTask = uploadBytesResumable(
 			storageRef,
-			imgFile.buffer,
-			imgFile.mimetype
+			theFile.buffer,
+			theFile.mimetype
 		);
 
 		/** Register three observers:
