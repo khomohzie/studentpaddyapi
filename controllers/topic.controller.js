@@ -11,17 +11,11 @@ exports.create = async (req, res) => {
 		if (topicExists) {
 			return res.status(400).json({ message: "Topic already exists." });
 		} else {
-			let topic;
+			const communityData = await Community.findOne({
+				name: community,
+			}).exec();
 
-			if (community) {
-				const communityData = await Community.findOne({
-					name: community,
-				}).exec();
-
-				topic = new Topic({ name, community_id: communityData._id });
-			} else {
-				topic = new Topic({ name });
-			}
+			const topic = new Topic({ name, community_id: communityData?._id });
 
 			await topic.save((err, data) => {
 				if (err) {
@@ -51,7 +45,7 @@ exports.getAll = async (req, res) => {
 				},
 			},
 			{
-				$addFields: { contributions: { $sum: "$posts" } },
+				$addFields: { contributions: { $size: "$posts" } },
 			},
 		]);
 
@@ -81,7 +75,7 @@ exports.readTopic = async (req, res) => {
 				},
 			},
 			{
-				$addFields: { contributions: { $sum: "$posts" } },
+				$addFields: { contributions: { $size: "$posts" } },
 			},
 		]);
 
