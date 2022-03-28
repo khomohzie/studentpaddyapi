@@ -10,6 +10,9 @@ const topicSchema = new mongoose.Schema(
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "Community",
 		},
+		community_name: {
+			type: String,
+		},
 		followers: {
 			type: Number,
 			default: 0,

@@ -10,7 +10,7 @@ exports.create = async (req, res) => {
 	try {
 		const data = JSON.parse(req.body.data);
 
-		let content, topic_id;
+		let content, topicData;
 
 		if (req.file) {
 			await firebaseUpload(req.file).then(
@@ -35,24 +35,25 @@ exports.create = async (req, res) => {
 			const newTopic = new Topic({
 				name: data.topic,
 				community_id: community?._id,
+				community_name: community?.name,
 			});
 
 			const savedTopic = await newTopic.save();
 
-			topic_id = savedTopic._id;
+			topicData = savedTopic;
 		} else {
-			topic_id = topic?._id;
+			topicData = topic;
 		}
 
 		const post = new Post({
 			topic: data.topic,
-			topic_id,
+			topic_id: topicData?._id,
 			poster: req.user._id,
 			content,
 			type: req.query.type,
 			parent_post_id: data.parent_post_id,
-			community_name: data.community_name,
-			community_id: community?._id,
+			community_name: topicData?.community_name,
+			community_id: topicData?.community_id,
 		});
 
 		await post.save((err, postdata) => {

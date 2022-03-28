@@ -15,7 +15,11 @@ exports.create = async (req, res) => {
 				name: community,
 			}).exec();
 
-			const topic = new Topic({ name, community_id: communityData?._id });
+			const topic = new Topic({
+				name,
+				community_id: communityData?._id,
+				community_name: communityData?.name,
+			});
 
 			await topic.save((err, data) => {
 				if (err) {
