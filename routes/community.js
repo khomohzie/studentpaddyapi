@@ -8,6 +8,7 @@ const {
 	readCommunity,
 	followCommunity,
 	unFollowCommunity,
+	getTopics,
 } = require("../controllers/community.controller");
 
 const { requireSignin } = require("../controllers/auth.controller");
@@ -19,5 +20,6 @@ router.get("/communities", getAll);
 router.get("/community/:name", readCommunity);
 router.post("/community/follow/:id", requireSignin, followCommunity);
 router.post("/community/unfollow/:id", requireSignin, unFollowCommunity);
+router.get("/community/topics/:id", requireSignin, getTopics);
 
 module.exports = router;

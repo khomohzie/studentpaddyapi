@@ -2,8 +2,10 @@ const { Community } = require("../models/community.model");
 const { CommunityContributor } = require("../models/community.model");
 const { CommunityFollower } = require("../models/community.model");
 const User = require("../models/user.model");
+const Topic = require("../models/topic.model");
 const { firebaseUpload } = require("../helpers/firebase_upload");
 const { translateError } = require("../helpers/mongo_helper");
+const { default: mongoose } = require("mongoose");
 
 exports.create = async (req, res) => {
 	const data = JSON.parse(req.body.data);
@@ -211,6 +213,38 @@ exports.unFollowCommunity = async (req, res) => {
 		await CommunityFollower.deleteOne(community).exec();
 
 		res.json({ message: "Successful!" });
+	} catch (error) {
+		console.log(error);
+		return res
+			.status(500)
+			.json({ error: "Something went wrong! Please try again." });
+	}
+};
+
+exports.getTopics = async (req, res) => {
+	try {
+		const id = mongoose.Types.ObjectId(req.params.id);
+
+		const topics = await Topic.aggregate([
+			{
+				$match: {
+					community_id: id,
+				},
+			},
+			{
+				$lookup: {
+					from: "posts",
+					localField: "_id",
+					foreignField: "topic_id",
+					as: "posts",
+				},
+			},
+			{
+				$addFields: { contributions: { $size: "$posts" } },
+			},
+		]);
+
+		res.json(topics);
 	} catch (error) {
 		console.log(error);
 		return res
