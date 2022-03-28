@@ -73,12 +73,35 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (req, res) => {
 	try {
-		const posts = await Post.find({ parent_post_id: undefined })
-			.populate(
-				"poster",
-				"_id username firstname lastname institution photo"
-			)
-			.exec();
+		const posts = await Post.aggregate([
+			{
+				$match: {
+					parent_post_id: undefined,
+				},
+			},
+			{
+				$lookup: {
+					from: "posts",
+					localField: "_id",
+					foreignField: "parent_post_id",
+					as: "comments",
+				},
+			},
+			{
+				$addFields: { comments: { $size: "$comments" } },
+			},
+		]);
+
+		await User.populate(posts, {
+			path: "poster",
+			select: {
+				firstname: 1,
+				lastname: 1,
+				username: 1,
+				institution: 1,
+				photo: 1,
+			},
+		});
 
 		res.json(posts);
 	} catch (error) {
@@ -190,6 +213,109 @@ exports.readPost = async (req, res) => {
 		});
 
 		res.json(post);
+	} catch (error) {
+		console.log(error);
+		res.status(500).json({
+			error: "Something went wrong! Please try again.",
+		});
+	}
+};
+
+exports.communityData = async (req, res) => {
+	try {
+		const requestType = req.query.type;
+
+		const communityId = mongoose.Types.ObjectId(req.params.communityId);
+
+		let data;
+
+		switch (requestType) {
+			case "posts":
+				data = await Post.aggregate([
+					{
+						$match: {
+							type: "post",
+							community_id: communityId,
+						},
+					},
+					{
+						$lookup: {
+							from: "posts",
+							localField: "_id",
+							foreignField: "parent_post_id",
+							as: "comments",
+						},
+					},
+					{
+						$addFields: { comments: { $size: "$comments" } },
+					},
+				]);
+				break;
+
+			case "resources":
+				data = await Post.aggregate([
+					{
+						$match: {
+							type: { $in: ["file", "link"] },
+							community_id: communityId,
+						},
+					},
+					{
+						$lookup: {
+							from: "posts",
+							localField: "_id",
+							foreignField: "parent_post_id",
+							as: "comments",
+						},
+					},
+					{
+						$addFields: { comments: { $size: "$comments" } },
+					},
+				]);
+				break;
+
+			case "questions":
+				data = await Post.aggregate([
+					{
+						$match: {
+							type: "question",
+							community_id: communityId,
+						},
+					},
+					{
+						$lookup: {
+							from: "posts",
+							localField: "_id",
+							foreignField: "parent_post_id",
+							as: "comments",
+						},
+					},
+					{
+						$addFields: { comments: { $size: "$comments" } },
+					},
+				]);
+				break;
+
+			default:
+				data = await Post.find({
+					type: "post",
+					community_id: communityId,
+				}).exec();
+				break;
+		}
+
+		await User.populate(data, {
+			path: "poster",
+			select: {
+				firstname: 1,
+				lastname: 1,
+				username: 1,
+				institution: 1,
+				photo: 1,
+			},
+		});
+
+		res.json(data);
 	} catch (error) {
 		console.log(error);
 		res.status(500).json({
