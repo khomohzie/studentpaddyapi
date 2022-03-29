@@ -227,82 +227,45 @@ exports.communityData = async (req, res) => {
 
 		const communityId = mongoose.Types.ObjectId(req.params.communityId);
 
-		let data;
+		let type;
 
 		switch (requestType) {
 			case "posts":
-				data = await Post.aggregate([
-					{
-						$match: {
-							type: "post",
-							community_id: communityId,
-						},
-					},
-					{
-						$lookup: {
-							from: "posts",
-							localField: "_id",
-							foreignField: "parent_post_id",
-							as: "comments",
-						},
-					},
-					{
-						$addFields: { comments: { $size: "$comments" } },
-					},
-				]);
+				type = "post";
 				break;
 
 			case "resources":
-				data = await Post.aggregate([
-					{
-						$match: {
-							type: { $in: ["file", "link"] },
-							community_id: communityId,
-						},
-					},
-					{
-						$lookup: {
-							from: "posts",
-							localField: "_id",
-							foreignField: "parent_post_id",
-							as: "comments",
-						},
-					},
-					{
-						$addFields: { comments: { $size: "$comments" } },
-					},
-				]);
+				type = { $in: ["file", "link"] };
 				break;
 
 			case "questions":
-				data = await Post.aggregate([
-					{
-						$match: {
-							type: "question",
-							community_id: communityId,
-						},
-					},
-					{
-						$lookup: {
-							from: "posts",
-							localField: "_id",
-							foreignField: "parent_post_id",
-							as: "comments",
-						},
-					},
-					{
-						$addFields: { comments: { $size: "$comments" } },
-					},
-				]);
+				type = "question";
 				break;
 
 			default:
-				data = await Post.find({
-					type: "post",
-					community_id: communityId,
-				}).exec();
+				type = "post";
 				break;
 		}
+
+		const data = await Post.aggregate([
+			{
+				$match: {
+					type: type,
+					community_id: communityId,
+				},
+			},
+			{
+				$lookup: {
+					from: "posts",
+					localField: "_id",
+					foreignField: "parent_post_id",
+					as: "comments",
+				},
+			},
+			{
+				$addFields: { comments: { $size: "$comments" } },
+			},
+		]);
 
 		await User.populate(data, {
 			path: "poster",
