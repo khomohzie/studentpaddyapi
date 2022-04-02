@@ -10,7 +10,7 @@ exports.getResources = async (req, res) => {
 			type = "link";
 		}
 
-		const resources = await Post.aggregate([
+		const aggregationPipeline = [
 			{
 				$match: {
 					type: type,
@@ -27,7 +27,45 @@ exports.getResources = async (req, res) => {
 			{
 				$addFields: { comments: { $size: "$comments" } },
 			},
-		]);
+		];
+
+		if (req.query.filterBy) {
+			aggregationPipeline.unshift({
+				$match: { community_name: req.query.filterBy },
+			});
+		}
+
+		switch (req.query.sortBy) {
+			case "recent":
+				/**
+				 * Basically, I cannot sort a non-existing field. comments is a number not an object.
+				 * This is as a result of the last stage in the pipeline.
+				 * So I have to first remove that stage using pop() method and then sort appropriately.
+				 * I still don't want the comments details though so I push back the removed stage.
+				 */
+
+				aggregationPipeline.pop();
+				aggregationPipeline.push(
+					{ $sort: { "comments.createdAt": -1 } },
+					{
+						$addFields: { comments: { $size: "$comments" } },
+					}
+				);
+				break;
+
+			case "newest":
+				aggregationPipeline.push({ $sort: { createdAt: -1 } });
+				break;
+
+			case "oldest":
+				aggregationPipeline.push({ $sort: { createdAt: 1 } });
+				break;
+
+			default:
+				break;
+		}
+
+		const resources = await Post.aggregate(aggregationPipeline);
 
 		await User.populate(resources, {
 			path: "poster",
@@ -40,45 +78,7 @@ exports.getResources = async (req, res) => {
 			},
 		});
 
-		if (req.query.community) {
-			res.json(resources);
-		}
-
-		if (req.query.sortBy === "newest") {
-			res.json(
-				resources
-					.sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1))
-					.filter(
-						(a) =>
-							a.community_name ===
-							(req.query.filterBy
-								? req.query.filterBy
-								: a.community_name)
-					)
-			);
-		} else if (req.query.sortBy === "oldest") {
-			res.json(
-				resources
-					.sort((a, b) => (a.createdAt > b.createdAt ? 1 : -1))
-					.filter(
-						(a) =>
-							a.community_name ===
-							(req.query.filterBy
-								? req.query.filterBy
-								: a.community_name)
-					)
-			);
-		} else {
-			res.json(
-				resources.filter(
-					(a) =>
-						a.community_name ===
-						(req.query.filterBy
-							? req.query.filterBy
-							: a.community_name)
-				)
-			);
-		}
+		res.json(resources);
 	} catch (error) {
 		console.log(error);
 		res.status(500).json({
