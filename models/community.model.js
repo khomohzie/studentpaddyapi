@@ -43,6 +43,7 @@ const communityContributorSchema = new mongoose.Schema(
 		},
 		owner: {
 			type: Boolean,
+			default: false,
 		},
 		contributions: {
 			type: Number,

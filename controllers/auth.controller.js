@@ -3,7 +3,6 @@ const jwt = require("jsonwebtoken");
 const expressjwt = require("express-jwt");
 const sgMail = require("@sendgrid/mail");
 const { translateError } = require("../helpers/mongo_helper");
-const { isEmailValidator } = require("../validators/auth");
 const { hashPassword, comparePassword } = require("../helpers/auth");
 
 sgMail.setApiKey(process.env.SENDGRID);
@@ -11,16 +10,23 @@ sgMail.setApiKey(process.env.SENDGRID);
 // Email verification
 exports.preRegister = async (req, res) => {
 	try {
-		const { email, username, country, password, confirmPassword } =
-			req.body;
+		const { email, username, country, password } = req.body;
 
-		const userExists = await User.findOne({ email }).exec();
+		const userExists = await User.findOne({
+			$or: [{ email }, { username }],
+		}).exec();
 
-		// Make a few verifications
-		if (userExists)
-			return res.status(400).json({ error: "User already exists!" });
-		if (password !== confirmPassword)
-			return res.status(401).json({ error: "Passwords do not match!" });
+		if (userExists) {
+			if (userExists.email === email) {
+				return res.status(400).json({ error: "Email already taken!" });
+			}
+
+			if (userExists.username === username) {
+				return res
+					.status(400)
+					.json({ error: "Username already taken!" });
+			}
+		}
 
 		const token = jwt.sign(
 			{ email, username, country, password },
@@ -117,16 +123,23 @@ exports.preRegister = async (req, res) => {
 
 exports.register = async (req, res) => {
 	try {
-		const { email, username, country, password, confirmPassword } =
-			req.body;
+		const { email, username, country, password } = req.body;
 
-		const userExists = await User.findOne({ email }).exec();
+		const userExists = await User.findOne({
+			$or: [{ email }, { username }],
+		}).exec();
 
-		// Make a few verifications
-		if (userExists)
-			return res.status(400).json({ error: "User already exists!" });
-		if (password !== confirmPassword)
-			return res.status(401).json({ error: "Passwords do not match!" });
+		if (userExists) {
+			if (userExists.email === email) {
+				return res.status(400).json({ error: "Email already taken!" });
+			}
+
+			if (userExists.username === username) {
+				return res
+					.status(400)
+					.json({ error: "Username already taken!" });
+			}
+		}
 
 		const hashedPassword = await hashPassword(password);
 
@@ -200,33 +213,47 @@ exports.signout = (req, res) => {
 	res.status(200).send("Signout success!");
 };
 
-exports.requireSignin = expressjwt({
-	secret: process.env.JWT_SECRET,
-	algorithms: ["HS256"],
-});
+// exports.requireSignin = expressjwt({
+// 	secret: process.env.JWT_SECRET,
+// 	algorithms: ["HS256"],
+// });
+exports.requireSignin = async (req, res, next) => {
+	if (req.headers.authorization) {
+		const token = req.headers.authorization.split(" ")[1];
+
+		jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
+			if (err) {
+				return res.status(403).send(err);
+			}
+
+			const userExists = await User.findOne({ _id: user._id }).exec();
+
+			if (userExists) {
+				req.user = user;
+				next();
+			} else {
+				return res
+					.status(403)
+					.send("User does not exist! Please signup!");
+			}
+		});
+	} else {
+		res.status(401).send("Unauthorized! Invalid token.");
+	}
+};
 
 exports.forgotPassword = async (req, res) => {
 	try {
 		const { userId } = req.body;
 
-		let user;
+		const user = await User.findOne({
+			$or: [{ email: userId }, { username: userId }],
+		}).exec();
 
-		if (isEmailValidator(userId)) {
-			user = await User.findOne({ email: userId }).exec();
-
-			if (!user) {
-				return res.status(401).json({
-					error: "User with that email does not exist! Please signup!",
-				});
-			}
-		} else {
-			user = await User.findOne({ username: userId }).exec();
-
-			if (!user) {
-				return res.status(401).json({
-					error: "User with that username does not exist! Please signup!",
-				});
-			}
+		if (!user) {
+			return res.status(401).json({
+				error: "User does not exist! Please signup!",
+			});
 		}
 
 		// credentials to reset password
@@ -278,7 +305,7 @@ exports.forgotPassword = async (req, res) => {
 
 exports.resetPassword = async (req, res) => {
 	try {
-		const { resetPin, password, confirmPassword } = req.body;
+		const { resetPin, password } = req.body;
 
 		const user = await User.findOne({
 			reset_password_pin: resetPin,
@@ -291,9 +318,6 @@ exports.resetPassword = async (req, res) => {
 		if (currentTime > user.reset_pin_expiry) {
 			return res.status(400).json({ error: "Pin is already expired!" });
 		}
-
-		if (password !== confirmPassword)
-			return res.status(401).json({ error: "Passwords do not match!" });
 
 		const hashedPassword = await hashPassword(password);
 

@@ -1,6 +1,7 @@
 const Topic = require("../models/topic.model");
 const { Community } = require("../models/community.model");
 const { translateError } = require("../helpers/mongo_helper");
+const { default: mongoose } = require("mongoose");
 
 exports.create = async (req, res) => {
 	try {
@@ -67,7 +68,7 @@ exports.readTopic = async (req, res) => {
 		const topic = await Topic.aggregate([
 			{
 				$match: {
-					name: req.params.name,
+					_id: mongoose.Types.ObjectId(req.params.id),
 				},
 			},
 			{

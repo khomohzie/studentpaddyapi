@@ -17,7 +17,7 @@ const multerUpload = require("../middlewares/multer");
 
 router.post("/community", requireSignin, multerUpload, create);
 router.get("/communities", getAll);
-router.get("/community/:name", readCommunity);
+router.get("/community/:id", readCommunity);
 router.post("/community/follow/:id", requireSignin, followCommunity);
 router.post("/community/unfollow/:id", requireSignin, unFollowCommunity);
 router.get("/community/topics/:id", requireSignin, getTopics);

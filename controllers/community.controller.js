@@ -112,7 +112,7 @@ exports.readCommunity = async (req, res) => {
 		const community = await Community.aggregate([
 			{
 				$match: {
-					name: req.params.name,
+					_id: mongoose.Types.ObjectId(req.params.id),
 				},
 			},
 			{
